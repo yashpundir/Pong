@@ -1,8 +1,8 @@
 import socket
 import threading
-import pickle
+import json
 import random as r
-from Mechanics import Player, Ball
+from Mechanics import Ball
 import pygame
 
 # INITIAL REQUIREMENTS
@@ -11,33 +11,33 @@ port = 5555
 s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 s.bind((server,port))
 s.listen(2)
-print("Server started, waiting for connection....")
+print("\nServer started, waiting for connection....\n")
 
 player_ever_joined = False
 current_client = 0
-ball = Ball()                                                              # Ball initiation
-players = [Player((15,175)),Player((685,175))]                             # Player instantiation cum database
+ball = Ball((350,200))                                                              # Ball initiation
+players = {'0':(15,175),'1':(675,175)}                                     # Player instantiation cum database
 
 
 def threaded_client(connection,client):                             
 	global current_client
-	if client == 0:                                                
-		other_player = 1
+	if client == '0':                                                
+		opponent = '1'
 	else:
-		other_player = 0
+		opponent = '0'
 
-	send_player = pickle.dumps(players[client])                    
-	send_other_player = pickle.dumps(players[other_player])
-	send_ball = pickle.dumps(ball)                                         
+	send_player = bytes(json.dumps(players[client]), encoding='utf-8')                    
+	send_opponent = bytes(json.dumps(players[opponent]), encoding='utf-8')
+	send_ball = bytes(json.dumps((ball.x, ball.y)), encoding='utf-8')	                                         
 	connection.send(send_player)                                           # send player object to current client
-	connection.send(send_other_player)                                     # sending other clients object to current client
+	connection.send(send_opponent)                                     # sending other clients object to current client
 	connection.send(send_ball)                                             # send ball object to client
 
 	
 	while True:
-		data = pickle.loads(connection.recv(2048))
+		data = json.loads(connection.recv(1024))
 
-		if len(data)==0:
+		if data=='quit':
 			break
 
 		else:
@@ -45,8 +45,8 @@ def threaded_client(connection,client):
 			# print(f"{data.x}, {data.y}")                                  # debugging statement
 			# print("DB UPDATED!\n")                                        # debugging statement
 
-			reply = pickle.dumps(players[other_player])                     # sending other client to current client
-			send_ball = pickle.dumps(ball)
+			reply = bytes(json.dumps(players[opponent]),encoding='utf-8')          # sending other client to current client
+			send_ball = bytes(json.dumps((ball.x,ball.y,ball.crash)), encoding='utf-8')
 			connection.send(reply)
 			connection.send(send_ball)
 
@@ -59,19 +59,24 @@ def threaded_client(connection,client):
 for i in range(2):
 	conn, addr = s.accept()                                               # when client.connect() executes in network.py
 	print("Connnected to :", conn.getpeername(), '\n')
-	thread = threading.Thread(name=f"thread{i}", target=threaded_client, args=(conn,current_client))
+	thread = threading.Thread(name=f"thread{i}", target=threaded_client, args=(conn,str(current_client)))
 	thread.start()
 	print(f"Thread started..[ACTIVE CONNECTIONS] = {threading.activeCount()-1}\n\n")
 	current_client += 1
 
-player_ever_joined = True
+players_ever_joined = True
 
 while True:                                                              
 	if current_client==2:
-		pygame.time.delay(30)
+		if ball.crash:
+			pygame.time.delay(3500)
+			ball.crash = False
+		# pygame.time.delay(20)
 		ball.move(players)                                    
 
-	if player_ever_joined and current_client==0:              # Close the connection if both clients have disconnected.
+	if players_ever_joined and current_client==0:              # Close the connection if both clients have disconnected.
 		s.close()
-		print("Server socket closed!")
-		print("TATA!")
+		break
+
+print("Server socket closed!")
+print("TATA!")

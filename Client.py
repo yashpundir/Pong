@@ -20,27 +20,24 @@ def draw_stuff():
 
 
 net = Network()                                                                         # connect to server
-player1, player2, ball = net.get_players_ball()                                         # player initiation
-print('player 1 pos: ', player1.x,player1.y)                                            # debugging statement
-print('player 2 pos:', player2.x,player2.y)                                             # debugging statement
-print('ball pos:', ball.x,ball.y)                                                       # debugging statement
+p1_pos, p2_pos, ball_pos = net.get_pos()                                         
+player1, player2, ball = Player(p1_pos), Player(p2_pos), Ball(ball_pos)                 # player initiation
 
 run = True
 while run:
-	
-	clock.tick(35)
-
-	for event in pygame.event.get():
-		if event.type==pygame.QUIT:
-			run = False
+	clock.tick(60)
 	
 	player1.move()
-	net.send(player1)                                            # send my pos 
-	player2 = net.receive_player()                               # update opponent player
-	ball = net.receive_ball()
+	net.send((player1.x, player2.y))                                            		# send my pos 
+	player2.x, player2.y = net.receive_player()                               			# update opponent player
+	ball.x, ball.y, ball.crash = net.receive_ball()
 
 	draw_stuff()
 
+	for event in pygame.event.get():
+		if event.type==pygame.QUIT:
+			net.send("quit")
+			run = False
+
 pygame.quit()
 net.client.close()                                   # close the socket
-print('debugging statement')

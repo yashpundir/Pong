@@ -1,8 +1,8 @@
 import socket
-import pickle
+import json
 
 class Network:
-	server = '192.168.0.194'
+	server = '192.168.1.8'
 	port = 5555
 
 	def __init__(self):
@@ -12,29 +12,29 @@ class Network:
 
 	def connect(self):
 		self.client.connect(self.addr)                     # connects to the server
-		player1 = self.client.recv(2048)
-		player2 = self.client.recv(2048)
-		ball = self.client.recv(2048)
-		return pickle.loads(player1) , pickle.loads(player2), pickle.loads(ball)
+		player1 = self.client.recv(1024)
+		player2 = self.client.recv(1024)
+		ball = self.client.recv(1024)
+		return json.loads(player1) , json.loads(player2), json.loads(ball)
 
 
 	def send(self,data):
 		try:
-			self.client.send(pickle.dumps(data))
+			self.client.send(bytes(json.dumps(data), encoding='utf-8'))
 		except socket.error as e:
 			print(e)
 
 	def receive_ball(self):
 		try:
-			return pickle.loads(self.client.recv(2048))
+			return json.loads(self.client.recv(1024))
 		except socket.error as e:
 			print(e)
 
 	def receive_player(self):
 		try:
-			return pickle.loads(self.client.recv(2048))
+			return json.loads(self.client.recv(1024))
 		except socket.error as e:
 			print(e)
 
-	def get_players_ball(self):
+	def get_pos(self):
 		return self.players_ball
